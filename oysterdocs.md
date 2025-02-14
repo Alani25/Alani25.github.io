@@ -36,7 +36,7 @@ TOC:
    - `/INSPIRE: []`
    - `/QUOTE: []`
    - `/QR-CODE: [URL, SCALE (optional), COLOR (optional), COLOR-BG (optional)]`
-4. d
+4. 
 
 ___
 
@@ -47,27 +47,27 @@ The directory is organized as follows:
 ## src/ index.js
 The heart of King Oyster, the main breain— this file contains main code for bot. 
 This file includes Google authentication, working with Google Drive & Spreadhseets, imports dependencies, sets bot status, connects to `quotes.txt` file, listens to interactions and created messages.
-TODO link google authentication site & .env
-TODO link Node Packages 
+<br>TODO link google authentication site & .env
+<br>TODO link Node Packages 
 
 ## src/ quotes.txt
 Lists quotes to be used in `index.js`.
-See `/quote` slash command.
-TODO link command
+<br>See `/quote` slash command.
+<br>TODO link command
 
 ## src/ register-commands.js
 Registers slash commands.
-Run the following command _once_ to register commands with a server:
+<br>Run the following command _once_ to register commands with a server:
 ```curl
 node src/register-commands.js
 ```
 Make sure to adjust the server ID in `.env` file.
-See Slash Commands section for more info on slash commands.
-TODO link slash commands
+<br>See Slash Commands section for more info on slash commands.
+<br>TODO link slash commands
 
 ## .env
 Contains all secrets. 
-This file contains:
+<br>This file contains:
 - `TOKEN`: The bot token, aka the Oyster's password.
 - `GUILD_ID`: The Discord server ID. Useful when registering slash commands with a new server.
 - `CLIENT_ID`: Oyster's user ID, not very important and I probably don't use.
@@ -86,9 +86,46 @@ This file contains:
 
 ## package.json & package-lock.json files + node_modules directory
 `package.json` contains version number of dependencies, while `package-lock.json` includes more info on packages used, connecting back to `node_modules` directory, which includes all the packages used in the project.
-TODO mention node commands here
-TODO link Node Packages section
+<br>TODO mention node commands here
+<br>TODO link Node Packages section
 
 ___
 
 # Node Packages
+Node Packages are outside libraries imported into our code to assist with specific tasks. The libraries have been installed through NPM. You may run `npm ls` to get a list of all current node packages, or `npm outdated` to search for any outdated packages. 
+
+**DiscordBot**
+<br><kbd>
+<br>├── <kbd>axios@1.7.9</kbd> Creating HTTP requests 
+<br>├── <kbd>discord.js@14.17.3</kbd> Main Discord bot library. 
+<br>├── <kbd>dotenv@16.4.7</kbd> Working with environmental variables. 
+<br>├── <kbd>fetch@1.1.0</kbd> Fetching url contents (UNUSED PACKAGE?) 
+<br>├── <kbd>fs@0.0.1</kbd> Used for reading file within directory. 
+<br>├── <kbd>googleapis@144.0.0</kbd> Used for Google authentication & connecting to Google tools. 
+<br>├── <kbd>path@0.12.7</kbd> Assists with tracking file paths. 
+<br>└── <kbd>qrcode@1.5.4</kbd> Generate & work with QR codes. 
+</kbd>
+
+___
+# Slash Commands
+Slash commands are a list of pre-defined commands that can be used to interact with the bot. 
+<img width="795" alt="image" src="https://github.com/user-attachments/assets/aea8cd47-814b-452c-a80d-1ffdc8fb9291" />
+
+
+   - `/report: [USERNAME, REASON, ATTACHMENTS (optional)]`
+   - `/add-officer: [USERNAME]`
+   - `/deadline: []`
+   - `/requirements: []`
+   - `/submit: [TITLE, AUTHOR, TYPE, INFO, SUBMISSION, LINK (optional)]`
+   - `/schedule: []`
+   - `/officehours: []`
+   - `/appointment: [MONTH, DATE, HOUR, DESCRIPTION (optional)]`
+   - `/rules: []`
+   - `/linkperm: [LINK]`
+   - `/suggest: [ACTIVITY, INFO]`
+   - `/roll: [MAX (optional)]`
+   - `/INSPIRE: []`
+   - `/QUOTE: []`
+   - `/QR-CODE: [URL, SCALE (optional), COLOR (optional), COLOR-BG (optional)]`
+
+
