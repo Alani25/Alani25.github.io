@@ -18,25 +18,34 @@ ___
 These documentations are written as of version **V0.1.06** of King Oyster Bot.
 
 TOC:
-1. Workspace
-2. Node packages
-3. Slash commands
-   - `/report: [USERNAME, REASON, ATTACHMENTS (optional)]`
-   - `/add-officer: [USERNAME]`
-   - `/deadline: []`
-   - `/requirements: []`
-   - `/submit: [TITLE, AUTHOR, TYPE, INFO, SUBMISSION, LINK (optional)]`
-   - `/schedule: []`
-   - `/officehours: []`
-   - `/appointment: [MONTH, DATE, HOUR, DESCRIPTION (optional)]`
-   - `/rules: []`
-   - `/linkperm: [LINK]`
-   - `/suggest: [ACTIVITY, INFO]`
-   - `/roll: [MAX (optional)]`
-   - `/INSPIRE: []`
-   - `/QUOTE: []`
-   - `/QR-CODE: [URL, SCALE (optional), COLOR (optional), COLOR-BG (optional)]`
-4. 
+1. [Workspace](#workspace)
+   - <kbd>[src/ index.js](#src-indexjs)</kbd>
+   - <kbd>[src/ quotes.txt](#src-quotestxt)</kbd>
+   - <kbd>[src/ register-commands.js](#src-register-commandsjs)</kbd>
+   - <kbd>[.env](#env)</kbd>
+   - <kbd>[package.json & package-lock.json files + node_modules directory](#packagejson--package-lockjson-files--node_modules-directory)</kbd>
+2. [Node packages](#node-packages)
+3. [Slash commands](#slash-commands)
+   - [<kbd>/report</kbd><kbd>`USERNAME`, `REASON`, `ATTACHMENTS` (optional)</kbd>](#report-username-reason-attachments-optional-)
+   - [<kbd>/add-officer</kbd><kbd>`USERNAME`</kbd>](#add-officer-username-)
+   - [<kbd>/deadline</kbd><kbd>_</kbd>](#deadline-)
+   - [<kbd>/requirements</kbd><kbd>_</kbd>](#requirements-)
+   - [<kbd>/submit</kbd><kbd>`TITLE`</kbd><kbd>`AUTHOR`</kbd><kbd>`TYPE`</kbd><kbd>`INFO`</kbd><kbd>`SUBMISSION`</kbd><kbd>`LINK` (optional)</kbd>](#submit-title-author-type-info-submission-link-optional-)
+   - [<kbd>/schedule</kbd><kbd>_</kbd>](#schedule-)
+   - [<kbd>/officehours</kbd><kbd>_</kbd>](#officehours-)
+   - [<kbd>/appointment</kbd><kbd>`MONTH`</kbd><kbd>`DATE`</kbd><kbd>`HOUR`</kbd><kbd>`DESCRIPTION` (optional)</kbd>](#appointment-month-date-hour-description-)
+   - [<kbd>/rules</kbd><kbd>_</kbd>](#rules-)
+   - [<kbd>/linkperm</kbd><kbd>`LINK`</kbd>](#linkperm-link-)
+   - [<kbd>/suggest</kbd><kbd>`ACTIVITY`</kbd><kbd>`INFO`</kbd>](#suggest-activity-info-)
+   - [<kbd>/roll</kbd><kbd>`MAX` (optional)</kbd>](#roll-max-optional-)
+   - [<kbd>/INSPIRE</kbd><kbd>_</kbd>](#inspire-)
+   - [<kbd>/QUOTE</kbd><kbd>_</kbd>](#quote-)
+   - [<kbd>/QR-CODE</kbd><kbd>`URL`</kbd><kbd>`SCALE` (optional)</kbd><kbd>`COLOR` (optional)</kbd><kbd>`COLOR-BG` (optional)</kbd>](#qr-code-url-scale-optional-color-optional-color-bg-optional-)
+4. [Non-Slash Commands](#non-slash-commands)
+   - <kbd>[Haiku Detection](#haiku-detection)</kbd>
+   - <kbd>[Count Syllables](#count-syllables)</kbd>
+   - <kbd>[Reactions](#reactions)</kbd>
+5. 
 
 ___
 
@@ -266,6 +275,56 @@ Have Oyster generate you a QR code that redirects to <kbd>URL</kbd>, along with 
 The slash command works the same way as the text command, except if you generate a QR code with the slash commands, the message is hidden and can only be viewed by you.
 
 > Can be activated through chat messages by sending a message that
-> <br>STARTS WITH <kbd>qr </kbd>
+> <br>STARTS WITH <kbd>`qr `</kbd>
 
 ___
+## Non-Slash Commands
+To make the bot feel more lively and noticed, we need it to react and interact with the community without being tasked to.
+<br>For this reason, I have added a set of interactions for the bot. Some of these interactions might still be considered commands, but most could happen unexpectedly.
+
+## Haiku Detection
+King Oyster automatically checks all send messages in search of a 5-7-5 syllables haiku pattern. If it finds a message that meets this critera, it'll reply with the following message:
+
+<img width="313" alt="image" src="https://github.com/user-attachments/assets/91232b0b-c548-45a7-a02a-ee32331e8ae0" />
+
+> <sup>**Note:** You don't need to send a massage with multiple lines for Oyster to find the haiku
+
+<br>Of course, the syllable counter method by King Oyster isn't perfect since it's only a bot. For us humans, it's as simple as counting how many times our chin drops when saying a word, but for a bot… well… it's more difficult to program the logic for that, so expect some flaws here and there. I'd say it's close to accurate but not fully there yet.
+
+## Count Syllables
+When asked to, King Oyster will count the syllables inside of a poem.
+<br>See image below for usage.
+
+<br><img width="800" alt="image" src="https://github.com/user-attachments/assets/e7b37c9a-d2b8-476f-8641-655ea2d98572" />
+
+> **Keywords:** <kbd>count</kbd> AND <kbd>syllables</kbd>
+
+## Reactions
+I was considering making a whole new section for this part but figured might as well keep it a part of this. 
+<br>King Oyster will react to different messages based on keywords, name of the channel they're send, mentions, and such.
+
+For example, if you say **"important"** in your message then king oyster will try to emphasize your message
+<img width="489" alt="image" src="https://github.com/user-attachments/assets/88085403-142d-4fa3-9141-e847f7b78bfc" />
+
+Personally, I would advise against reading the rest of this section, as knowing when and what Oyster reacts to would ruin the magic, but I won't stop you if you're curious. 
+<br>Enough blabber, here's a table—
+
+| Emoji    | ID      | Keywords | CHANNEL KEYWORD | INCLUDES |
+| -------- | ------- | -------- | --------------- | -------- |
+| 💚       | X       | X        | "announce"      |`@everyone`|
+| ![image](https://github.com/user-attachments/assets/2b34f20d-5fae-4442-9cfe-c69875ccfced) | 1334234382772207696 | X   | NOT "anounce"   |`@everyone`|
+| ![image](https://github.com/user-attachments/assets/2b34f20d-5fae-4442-9cfe-c69875ccfced) | 1334234382772207696 | X   | "share"        | ATTACHMENT |
+| ![image](https://github.com/user-attachments/assets/0583e696-fc09-40fa-9578-a5e7d098a9bd) | 1334609229599739976 | X   | NOT "share"    | ATTACHMENT |
+| ![image](https://github.com/user-attachments/assets/17199945-c2f1-45d3-9876-ecb43e58c398) | 1334609056421249186 | "boba"     | X       | X          |
+| <kbd>![image](https://github.com/user-attachments/assets/4e23e73d-c06f-467e-983b-b1f6957cd7e5)</kbd> | 1334608848513798155 | "origami"  | X       | X          |
+| ![image](https://github.com/user-attachments/assets/56190408-0d15-41b2-930a-fbe7b5111e9a) | 1334609229599739976 | "important"| X       | X          |
+| ‼️ | 1334609229599739976 | "important"| X      | X          |
+| ![image](https://github.com/user-attachments/assets/78a53c5a-e309-42d0-9027-5811894dc1c9) | 1334609780097945733 | "oops" OR "uhoh"| X  | X          |
+| 💚 | X                  | "love" or "thank"| X | X          |
+
+> 🐛 **TODO:** Make sure Oyster can detect poems inside of the share channel and react to them with either a special scroll 📜 or the same thing it reacts to images there
+
+
+
+
+
