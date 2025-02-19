@@ -254,7 +254,7 @@ Get a random adjective and noun to help spark some inspiration ✨
 
 ___
 ## <kbd>`/quote` </kbd>
-Wanna feel some wisedom? Then get a random quote from a set of 40+ pre-selected quotes (saved in [quotes.txt](TODO link quotes.txt) file).
+Wanna feel some wisdom? Then get a random quote from a set of 40+ pre-selected quotes (saved in [quotes.txt](TODO link quotes.txt) file).
 <br>Don't like what you see? Worry not you ungrateful child, for I have an <kbd>Another Quote</kbd> only for you.
 
 <br><img width="451" alt="image" src="https://github.com/user-attachments/assets/7ba96f4e-b587-4911-97e8-06c7003940c2" />
