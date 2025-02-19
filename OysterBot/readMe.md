@@ -182,7 +182,8 @@ It's unlikely that the bot would ever have issues with uploading the <kbd>SUBMIS
 ___
 ## <kbd>`/schedule` </kbd>
 This command will inform the user of the meeting time and location of our regular C&K member meetings, along with the exact meeting time of the next meeting.
-<br> 🐛 TODO fix bug with time (hosting service & discord have different timezones which SUCKS btw bc I spend hours trying to fix this for the deadline and just now realized it's the same issue for this)
+
+<br> > 🐛 TODO fix bug with time (hosting service & discord have different timezones which SUCKS btw bc I spend hours trying to fix this for the deadline and just now realized it's the same issue for this)
 
 > Can be activated through chat messages by replying to or mentioning `@King Oyster#0093`, using keywords: 
 > <br><kbd>schedule</kbd> or <kbd>meet</kbd> AND <kbd>time</kbd> or <kbd>when</kbd> or <kbd>where</kbd> 
@@ -191,7 +192,7 @@ ___
 ## <kbd>`/officehours` </kbd>
 Get the location and time of our office hours for the semester.
 <br>This command connects to a Google spreadsheet, where officers can input their office hours times without needing to touch the code.
-<br>Same case for infortmation included in the [deadline](#deadline-) and [schedule](#schedule-) commands. (TODO check links here)
+<br>Same case for infortmation included in the [deadline](#deadline-) and [schedule](#schedule-) commands.
 
 > Can be activated through chat messages by replying to or mentioning `@King Oyster#0093`, using keywords: 
 > <br><kbd>officehours</kbd> or <kbd>office hours</kbd> or <kbd>office-hours</kbd>
