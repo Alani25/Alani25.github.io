@@ -1,3 +1,5 @@
+// This function is for decoding Pixel Lide share links
+
 // Set Al to window's location
 var Al=location.href
 
