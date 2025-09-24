@@ -1,5 +1,5 @@
 /*Wick Engine https://github.com/Wicklets/wick-engine*/
-var WICK_ENGINE_BUILD_VERSION = "2025.9.24.18.50.25";
+var WICK_ENGINE_BUILD_VERSION = "2025.9.24.19.4.19";
 /*!
  * Paper.js v0.12.4 - The Swiss Army Knife of Vector Graphics Scripting.
  * http://paperjs.org/
@@ -62866,11 +62866,23 @@ Wick.View.Project = class extends Wick.View {
             } catch {}
             alert('Two-finger UNDO'); // remove once verified
 
-            if (this.model.undo()) {
+            let didUndo = false;
+            try {
+              if (this.model.project && typeof this.model.project.undo === 'function') {
+                didUndo = this.model.project.undo();
+              } else if (typeof this.model.undo === 'function') {
+                didUndo = this.model.undo();
+              }
+            } catch (err) {
+              console.error('Undo call failed', err);
+            }
+            if (didUndo) {
               this.applyChanges();
               this.fireEvent('canvasModified', {
                 undo: true
               }, 'Undo');
+            } else {
+              alert('Undo stack empty or wrong target');
             }
           }
         }
