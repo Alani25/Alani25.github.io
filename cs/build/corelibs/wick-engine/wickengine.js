@@ -1,5 +1,5 @@
 /*Wick Engine https://github.com/Wicklets/wick-engine*/
-var WICK_ENGINE_BUILD_VERSION = "2025.9.28.18.13.2";
+var WICK_ENGINE_BUILD_VERSION = "2025.9.28.19.39.30";
 /*!
  * Paper.js v0.12.4 - The Swiss Army Knife of Vector Graphics Scripting.
  * http://paperjs.org/
@@ -51124,13 +51124,6 @@ Wick.Project = class extends Wick.Base {
     // Start tick loop
     this._tickIntervalID = setInterval(() => {
       args.onBeforeTick();
-
-      // before calling tick()
-      if (typeof Wick !== 'undefined' && Wick.requestUndo) {
-        Wick.requestUndo = false;
-        this.undo();
-        alert("undoing magic here");
-      }
       this.tools.interact.determineMouseTargets();
       // console.time('tick');
       var error = this.tick();
@@ -62866,14 +62859,25 @@ Wick.View.Project = class extends Wick.View {
           const now = ts ?? ev.timeStamp;
           const dur = now - cand.startAt;
           // For testing, accept anything under 10s
-          if (dur <= 1000) {
+          if (dur <= 10000) {
             // Visible confirmation on device (no console needed)
             try {
               navigator.vibrate && navigator.vibrate(10);
             } catch {}
-            window.Wick = window.Wick || {};
-            Wick.requestUndo = true;
-            alert('Two-finger UNDO'); // remove once verified TODO -H.A.
+            alert('Two-finger UNDO'); // remove once verified
+
+            let didUndo = false;
+            try {
+              didUndo = this.model.undo();
+              this.applyChanges();
+              this.fireEvent('canvasModified', {
+                undo: true
+              }, 'Undo');
+              alert("undid things :)");
+            } catch (err) {
+              alert('Undo call failed');
+              alert(err);
+            }
           }
         }
 
