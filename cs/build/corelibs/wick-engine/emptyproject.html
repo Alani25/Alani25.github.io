@@ -14,7 +14,7 @@
         <!-- The Wick Engine build is injected here during the engine build step (see gulpfile.js) -->
         <script>
             /*Wick Engine https://github.com/Wicklets/wick-engine*/
-var WICK_ENGINE_BUILD_VERSION = "2025.9.24.19.4.19";
+var WICK_ENGINE_BUILD_VERSION = "2025.9.28.18.5.53";
 /*!
  * Paper.js v0.12.4 - The Swiss Army Knife of Vector Graphics Scripting.
  * http://paperjs.org/
@@ -51139,6 +51139,12 @@ Wick.Project = class extends Wick.Base {
     // Start tick loop
     this._tickIntervalID = setInterval(() => {
       args.onBeforeTick();
+
+      // before calling tick()
+      if (typeof Wick !== 'undefined' && Wick.requestUndo) {
+        Wick.requestUndo = false;
+        this.undo();
+      }
       this.tools.interact.determineMouseTargets();
       // console.time('tick');
       var error = this.tick();
@@ -62874,31 +62880,14 @@ Wick.View.Project = class extends Wick.View {
           const now = ts ?? ev.timeStamp;
           const dur = now - cand.startAt;
           // For testing, accept anything under 10s
-          if (dur <= 10000) {
+          if (dur <= 1000) {
             // Visible confirmation on device (no console needed)
             try {
               navigator.vibrate && navigator.vibrate(10);
             } catch {}
-            alert('Two-finger UNDO'); // remove once verified
-
-            let didUndo = false;
-            try {
-              if (this.model.project && typeof this.model.project.undo === 'function') {
-                didUndo = this.model.project.undo();
-              } else if (typeof this.model.undo === 'function') {
-                didUndo = this.model.undo();
-              }
-            } catch (err) {
-              console.error('Undo call failed', err);
-            }
-            if (didUndo) {
-              this.applyChanges();
-              this.fireEvent('canvasModified', {
-                undo: true
-              }, 'Undo');
-            } else {
-              alert('Undo stack empty or wrong target');
-            }
+            window.Wick = window.Wick || {};
+            Wick.requestUndo = true;
+            alert('Two-finger UNDO'); // remove once verified TODO -H.A.
           }
         }
 
