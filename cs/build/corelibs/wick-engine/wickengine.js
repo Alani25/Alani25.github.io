@@ -1,5 +1,5 @@
 /*Wick Engine https://github.com/Wicklets/wick-engine*/
-var WICK_ENGINE_BUILD_VERSION = "2025.9.28.18.5.53";
+var WICK_ENGINE_BUILD_VERSION = "2025.9.28.18.13.2";
 /*!
  * Paper.js v0.12.4 - The Swiss Army Knife of Vector Graphics Scripting.
  * http://paperjs.org/
@@ -51129,6 +51129,7 @@ Wick.Project = class extends Wick.Base {
       if (typeof Wick !== 'undefined' && Wick.requestUndo) {
         Wick.requestUndo = false;
         this.undo();
+        alert("undoing magic here");
       }
       this.tools.interact.determineMouseTargets();
       // console.time('tick');
