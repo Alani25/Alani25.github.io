@@ -62866,6 +62866,11 @@ Wick.View.Project = class extends Wick.View {
             } catch {}
             // alert('Two-finger UNDO'); // remove once verified
 
+			this._isInProgress = false;
+    if (this.croquis) {
+      this.croquis.clearLayer();
+    }
+
             try {
               // this.model.undo();
               // this.applyChanges();
