@@ -62859,7 +62859,7 @@ Wick.View.Project = class extends Wick.View {
           const now = ts ?? ev.timeStamp;
           const dur = now - cand.startAt;
           // For testing, accept anything under 10s
-          if (dur <= 10000) {
+          if (dur <= 100) {
             // Visible confirmation on device (no console needed)
             try {
               navigator.vibrate && navigator.vibrate(10);
