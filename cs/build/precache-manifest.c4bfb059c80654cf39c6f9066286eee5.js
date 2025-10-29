@@ -1,11 +1,11 @@
 self.__precacheManifest = [
   {
-    "revision": "13f8416650d3d036468e",
+    "revision": "b72feae9db2b2e150ece",
     "url": "./static/css/main.6c75230c.chunk.css"
   },
   {
-    "revision": "13f8416650d3d036468e",
-    "url": "./static/js/main.13f84166.chunk.js"
+    "revision": "b72feae9db2b2e150ece",
+    "url": "./static/js/main.b72feae9.chunk.js"
   },
   {
     "revision": "c1c42690e26896e406a8",
@@ -740,7 +740,7 @@ self.__precacheManifest = [
     "url": "./static/media/white-heart.daf330ed.svg"
   },
   {
-    "revision": "63ded555cc8cebcdb03419900da97d29",
+    "revision": "4657d817451e95bc252ddf585f4468ea",
     "url": "./index.html"
   }
 ];
