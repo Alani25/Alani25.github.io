@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DMD bitmap editor</title>
+<style>
+  body { font: 16px system-ui, sans-serif; margin: 1rem; color: #202020; }
+  h1 { font-size: 1.5rem; margin-bottom: .25rem; }
+  p { margin: .5rem 0; }
+  fieldset { margin: .7rem 0; padding: .6rem; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem 1rem; }
+  button, input, select { font: inherit; }
+  button, select { padding: .25rem .45rem; }
+  input[type=number] { width: 5.5rem; }
+  input[type=range] { width: 9rem; vertical-align: middle; }
+  button[aria-pressed=true] { outline: 2px solid #176cc5; outline-offset: 1px; }
+  .swatch { min-width: 2.5rem; background: var(--shade); color: var(--ink); }
+  #viewport { overflow: auto; max-height: 65vh; border: 1px solid #777; background: #ddd; }
+  #stage { position: relative; width: 960px; height: 540px; margin: auto; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  #overlay { position: absolute; inset: 0; touch-action: none; cursor: crosshair; }
+  #status { min-height: 1.5em; }
+  small { color: #555; }
+  #colorPreview { display: inline-block; width: 1.5rem; height: 1.5rem; border: 1px solid #777; vertical-align: middle; }
+  #workspace { display: grid; grid-template-columns: 18rem minmax(0, 1fr); gap: 1rem; align-items: start; }
+  #sidebar { max-height: calc(100vh - 8rem); overflow: auto; }
+  #sidebar .controls { align-items: center; gap: .5rem; }
+  #sidebar label { max-width: 100%; }
+  #sidebar input[type=file] { width: 100%; }
+  #tabs { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; }
+  #tabs button[aria-selected=true] { background: #e8eef5; border: 2px solid #176cc5; }
+  #drawingArea { min-width: 0; }
+  #brushValue { white-space: nowrap; }
+</style>
+</head>
+<body>
+<h1>DMD bitmap editor</h1>
+<p>Draw in grayscale and export a bitmap. Everything stays in this browser.</p>
+
+<div id="workspace">
+<aside id="sidebar" aria-label="Pattern controls">
+  <nav id="tabs" role="tablist" aria-label="Editor sections">
+    <button id="tab-drawing" role="tab" aria-controls="panel-drawing" aria-selected="true" tabindex="0">Drawing</button>
+    <button id="tab-examples" role="tab" aria-controls="panel-examples" aria-selected="false" tabindex="-1">Examples &amp; position</button>
+    <button id="tab-view" role="tab" aria-controls="panel-view" aria-selected="false" tabindex="-1">Cursor &amp; view</button>
+    <button id="tab-file" role="tab" aria-controls="panel-file" aria-selected="false" tabindex="-1">Bitmap file</button>
+  </nav>
+<fieldset id="panel-drawing" role="tabpanel" aria-labelledby="tab-drawing">
+  <legend>Drawing</legend>
+  <div class="controls">
+    <label>Gray <input id="gray" type="range" min="0" max="255" value="255"></label>
+    <label>Value <input id="grayNumber" type="number" min="0" max="255" value="255"></label>
+    <span id="colorPreview" aria-hidden="true"></span>
+    <span id="swatches" class="controls" role="group" aria-label="Grayscale presets">
+      <button class="swatch" data-gray="0" style="--shade:#000;--ink:#fff" title="Black / erase">0</button>
+      <button class="swatch" data-gray="64" style="--shade:#404040;--ink:#fff">64</button>
+      <button class="swatch" data-gray="128" style="--shade:#808080;--ink:#000">128</button>
+      <button class="swatch" data-gray="192" style="--shade:#c0c0c0;--ink:#000">192</button>
+      <button class="swatch" data-gray="255" style="--shade:#fff;--ink:#000">255</button>
+    </span>
+    <label>Brush size <input id="brush" type="range" min="1" max="128" value="8"> <output id="brushValue">8 × 8 px</output></label>
+    <button id="drawTool" aria-pressed="true">Draw</button>
+    <button id="eraseTool" aria-pressed="false">Erase</button>
+    <button id="undo" disabled>Undo</button>
+    <button id="redo" disabled>Redo</button>
+  </div>
+  <p><small>Click to paint. Click the same spot again with the same gray to erase. Drag to draw continuously. Brush size 1 edits one DMD pixel.</small></p>
+</fieldset>
+
+<fieldset id="panel-examples" role="tabpanel" aria-labelledby="tab-examples" hidden>
+  <legend>Examples &amp; position</legend>
+  <div class="controls">
+    <label>Examples
+      <select id="example">
+        <option value="">Choose a pattern…</option>
+        <option value="on">All ON (white)</option>
+        <option value="off">All OFF (black)</option>
+        <option value="disk">Circle / disk</option>
+        <option value="annulus">Donut / annulus</option>
+        <option value="square">Square</option>
+        <option value="triangle">Triangle pointing right</option>
+        <option value="hline">Horizontal line</option>
+        <option value="vline">Vertical line</option>
+        <option value="left">Left half filled</option>
+        <option value="right">Right half filled</option>
+        <option value="hstripes">Horizontal stripes</option>
+        <option value="vstripes">Vertical stripes</option>
+        <option value="star">Star</option>
+        <option value="smiley">Smiley face</option>
+        <option value="a">Letter A</option>
+        <option value="text">Text</option>
+      </select>
+    </label>
+    <label>Size (px) <input id="patternSize" type="number" min="1" max="4096" value="128"></label>
+    <label>Center X <input id="centerX" type="number" min="0" max="1919" value="688"></label>
+    <label>Center Y <input id="centerY" type="number" min="0" max="1079" value="520"></label>
+    <button id="applyExample">Apply example</button>
+    <button id="canvasCenter">Use canvas center</button>
+  </div>
+  <div class="controls" style="margin-top:.6rem">
+    <label>Line width (px) <input id="lineWidth" type="number" min="1" max="4096" value="16"></label>
+    <label>Stripe period (px) <input id="period" type="number" min="2" max="4096" value="16"></label>
+    <label>Ring hole (%) <input id="hole" type="number" min="0" max="95" value="50"></label>
+    <label>Text <input id="text" value="ALANI" maxlength="30" size="12" aria-label="Pattern text"></label>
+  </div>
+  <p><small>Drag anywhere on the canvas to move the whole pattern, including hand-drawn pixels. Movement stops at the edges so no pixels are lost. Center X/Y follows the move; Ctrl/Cmd+Z undoes it.</small></p>
+  <p><small>Examples replace the drawing; Undo restores it. Shapes use the selected gray on black. Size is the outer width/height; for text it is the maximum height. Half fills and stripes stay inside that square. Coordinates start at (0, 0), top left.</small></p>
+</fieldset>
+
+<fieldset id="panel-view" role="tabpanel" aria-labelledby="tab-view" hidden>
+  <legend>Cursor &amp; view</legend>
+  <div class="controls">
+    <button id="addCursor">Add cursor</button>
+    <label>Selected cursor <select id="cursorSelect" disabled><option>No cursors</option></select></label>
+    <button id="removeCursor" disabled>Remove selected</button>
+    <label>Cursor X <input id="cursorX" type="number" min="0" max="1919" value="688" disabled></label>
+    <label>Cursor Y <input id="cursorY" type="number" min="0" max="1079" value="520" disabled></label>
+    <label><input id="includeCursor" type="checkbox" disabled> Include selected cursor in BMP</label>
+    <label>Cursor size (px) <input id="cursorSize" type="number" min="3" max="4096" value="64"></label>
+    <label>Cursor gray <input id="cursorGray" type="number" min="0" max="255" value="255"></label>
+    <label>Zoom
+      <select id="zoom">
+        <option value="fit">Fit</option><option value="0.25">25%</option><option value="0.5">50%</option>
+        <option value="1">100%</option><option value="2">200%</option><option value="4">400%</option>
+        <option value="8">800%</option><option value="16">1600%</option>
+      </select>
+    </label>
+    <label><input id="grid" type="checkbox"> Pixel grid (200%+)</label>
+    <output id="position">Pointer: —</output>
+  </div>
+  <p><small>Click the canvas to place the selected cursor; drag any crosshair to move it. Add cursor creates another independent crosshair. With no cursors, your first click creates one. Arrow keys move the selected cursor one pixel; Shift moves ten. Cursors stay fixed when you drag the pattern. Only cursors checked for inclusion are exported, at 1 pixel thick.</small></p>
+</fieldset>
+
+<fieldset id="panel-file" role="tabpanel" aria-labelledby="tab-file" hidden>
+  <legend>Bitmap file</legend>
+  <div class="controls">
+    <label>Width <input id="width" type="number" min="1" max="4096" value="1920"></label>
+    <label>Height <input id="height" type="number" min="1" max="4096" value="1080"></label>
+    <button id="resize">Resize canvas</button>
+    <label>Open BMP / PNG <input id="import" type="file" accept=".bmp,.png,image/bmp,image/png"></label>
+    <label>Filename <input id="filename" value="dmd_pattern.bmp" size="21"></label>
+    <button id="export">Export BMP</button>
+  </div>
+  <p><small>Default: DLP6500, 1920 × 1080. Export: uncompressed 24-bit BMP with identical R/G/B values, preserving every gray level. Resizing preserves the top-left overlap and fills new space black.</small></p>
+  <p><small>For grayscale in LightCrafter, use an 8-bit pattern/LUT setting. Gray values request temporal modulation; mirrors still switch between their ON and OFF angles. Apply changes with Stop → Update LUT → Start after loading.</small></p>
+</fieldset>
+</aside>
+<main id="drawingArea" aria-label="Pattern canvas">
+<div id="viewport" aria-label="Scrollable bitmap canvas">
+  <div id="stage">
+    <canvas id="bitmap" width="1920" height="1080" aria-label="DMD pattern preview"></canvas>
+    <canvas id="overlay" width="1920" height="1080" aria-label="Draw pattern or place cursor" tabindex="0"></canvas>
+  </div>
+</div>
+<p id="status" role="status" aria-live="polite">Ready.</p>
+</main>
+</div>
+
+<script>
+'use strict';
+
+// Exact integer grayscale raster. Canvas is only a preview; BMP export uses this data.
+class Raster {
+  constructor(width, height, pixels) {
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > 4096 || height > 4096) throw new Error('Dimensions must be 1–4096 pixels.');
+    if (pixels && pixels.length !== width * height) throw new Error('Pixel count does not match dimensions.');
+    this.width = width; this.height = height;
+    this.pixels = pixels ? new Uint8Array(pixels) : new Uint8Array(width * height);
+  }
+  copy() { return new Raster(this.width, this.height, this.pixels); }
+  bounds(x, y, size) {
+    const left = Math.round(x) - Math.floor(size / 2), top = Math.round(y) - Math.floor(size / 2);
+    return [Math.max(0, left), Math.max(0, top), Math.min(this.width, left + size), Math.min(this.height, top + size)];
+  }
+  isStamp(x, y, size, value) {
+    const [x0,y0,x1,y1] = this.bounds(x,y,size);
+    if (x0 >= x1 || y0 >= y1) return false;
+    for (let yy=y0; yy<y1; yy++) for (let xx=x0; xx<x1; xx++) if (this.pixels[yy*this.width+xx] !== value) return false;
+    return true;
+  }
+  stamp(x, y, size, value) {
+    const [x0,y0,x1,y1] = this.bounds(x,y,size);
+    if (x0 >= x1 || y0 >= y1) return;
+    for (let yy=y0; yy<y1; yy++) this.pixels.fill(value, yy*this.width+x0, yy*this.width+x1);
+  }
+  line(x0,y0,x1,y1,size,value) {
+    let dx=Math.abs(x1-x0), sx=x0<x1?1:-1, dy=-Math.abs(y1-y0), sy=y0<y1?1:-1, err=dx+dy;
+    for (;;) {
+      this.stamp(x0,y0,size,value);
+      if (x0===x1 && y0===y1) break;
+      const e2=2*err;
+      if (e2>=dy) {err+=dy; x0+=sx;}
+      if (e2<=dx) {err+=dx; y0+=sy;}
+    }
+  }
+  crosshair(x,y,size,value) {
+    this.line(Math.max(0,x-Math.floor(size/2)),y,Math.min(this.width-1,x+Math.ceil(size/2)-1),y,1,value);
+    this.line(x,Math.max(0,y-Math.floor(size/2)),x,Math.min(this.height-1,y+Math.ceil(size/2)-1),1,value);
+  }
+}
+
+
+// Moving an existing bitmap preserves its exact gray levels and all painted details.
+function contentBounds(raster) {
+  let left=raster.width,top=raster.height,right=-1,bottom=-1;
+  for(let y=0;y<raster.height;y++) for(let x=0;x<raster.width;x++) {
+    if(raster.pixels[y*raster.width+x]===0) continue;
+    left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x);bottom=Math.max(bottom,y);
+  }
+  return right<0?null:{left,top,right,bottom};
+}
+function moveOffset(source,bounds,dx,dy) {
+  return {dx:Math.max(-bounds.left,Math.min(source.width-1-bounds.right,Math.round(dx))),
+          dy:Math.max(-bounds.top,Math.min(source.height-1-bounds.bottom,Math.round(dy)))};
+}
+function translateInto(source,target,bounds,dx,dy) {
+  target.pixels.fill(0);
+  for(let y=bounds.top;y<=bounds.bottom;y++) {
+    const start=y*source.width+bounds.left;
+    target.pixels.set(source.pixels.subarray(start,y*source.width+bounds.right+1),(y+dy)*target.width+bounds.left+dx);
+  }
+}
+
+function encodeBMP(raster) {
+  const {width, height, pixels}=raster;
+  const stride=(width*3+3)&~3, pixelBytes=stride*height;
+  const buffer=new ArrayBuffer(54+pixelBytes), view=new DataView(buffer), bytes=new Uint8Array(buffer);
+  view.setUint16(0,0x4d42,true); view.setUint32(2,buffer.byteLength,true);
+  view.setUint32(10,54,true); view.setUint32(14,40,true);
+  view.setInt32(18,width,true); view.setInt32(22,height,true);
+  view.setUint16(26,1,true); view.setUint16(28,24,true);
+  view.setUint32(34,pixelBytes,true);
+  for (let y=0;y<height;y++) {
+    let offset=54+(height-1-y)*stride;
+    for (let x=0;x<width;x++) { const v=pixels[y*width+x]; bytes[offset++]=v; bytes[offset++]=v; bytes[offset++]=v; }
+  }
+  return buffer;
+}
+
+function insidePolygon(x,y,points) {
+  let inside=false;
+  for (let i=0,j=points.length-1;i<points.length;j=i++) {
+    const a=points[i],b=points[j];
+    if ((a[1]>y)!==(b[1]>y) && x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0]) inside=!inside;
+  }
+  return inside;
+}
+
+const FONT={
+  A:['01110','10001','10001','11111','10001','10001','10001'], B:['11110','10001','10001','11110','10001','10001','11110'],
+  C:['01111','10000','10000','10000','10000','10000','01111'], D:['11110','10001','10001','10001','10001','10001','11110'],
+  E:['11111','10000','10000','11110','10000','10000','11111'], F:['11111','10000','10000','11110','10000','10000','10000'],
+  G:['01111','10000','10000','10111','10001','10001','01111'], H:['10001','10001','10001','11111','10001','10001','10001'],
+  I:['11111','00100','00100','00100','00100','00100','11111'], J:['00111','00010','00010','00010','10010','10010','01100'],
+  K:['10001','10010','10100','11000','10100','10010','10001'], L:['10000','10000','10000','10000','10000','10000','11111'],
+  M:['10001','11011','10101','10101','10001','10001','10001'], N:['10001','11001','11001','10101','10011','10011','10001'],
+  O:['01110','10001','10001','10001','10001','10001','01110'], P:['11110','10001','10001','11110','10000','10000','10000'],
+  Q:['01110','10001','10001','10001','10101','10010','01101'], R:['11110','10001','10001','11110','10100','10010','10001'],
+  S:['01111','10000','10000','01110','00001','00001','11110'], T:['11111','00100','00100','00100','00100','00100','00100'],
+  U:['10001','10001','10001','10001','10001','10001','01110'], V:['10001','10001','10001','10001','10001','01010','00100'],
+  W:['10001','10001','10001','10101','10101','10101','01010'], X:['10001','10001','01010','00100','01010','10001','10001'],
+  Y:['10001','10001','01010','00100','00100','00100','00100'], Z:['11111','00001','00010','00100','01000','10000','11111'],
+  '0':['01110','10001','10011','10101','11001','10001','01110'], '1':['00100','01100','00100','00100','00100','00100','01110'],
+  '2':['01110','10001','00001','00010','00100','01000','11111'], '3':['11110','00001','00001','01110','00001','00001','11110'],
+  '4':['00010','00110','01010','10010','11111','00010','00010'], '5':['11111','10000','10000','11110','00001','00001','11110'],
+  '6':['01110','10000','10000','11110','10001','10001','01110'], '7':['11111','00001','00010','00100','01000','01000','01000'],
+  '8':['01110','10001','10001','01110','10001','10001','01110'], '9':['01110','10001','10001','01111','00001','00001','01110'],
+  ' ':['00000','00000','00000','00000','00000','00000','00000'], '-':['00000','00000','00000','11111','00000','00000','00000'],
+  '?':['01110','10001','00001','00010','00100','00000','00100']
+};
+
+function pattern(raster,kind,o) {
+  raster.pixels.fill(kind==='on'?255:0);
+  if (kind==='on'||kind==='off') return;
+  const {cx,cy,size,gray,thickness,period,hole,text}=o;
+  if (kind==='a'||kind==='text') {
+    const letters=(kind==='a'?'A':text.toUpperCase()).slice(0,30);
+    const scale=Math.max(1,Math.floor(size/7)), width=Math.max(0,letters.length*6-1)*scale;
+    const left=cx-Math.floor(width/2),top=cy-Math.floor(7*scale/2);
+    [...letters].forEach((c,index)=>(FONT[c]||FONT['?']).forEach((row,y)=>[...row].forEach((v,x)=>{
+      if (v==='1') raster.stamp(left+(index*6+x)*scale+Math.floor(scale/2),top+y*scale+Math.floor(scale/2),scale,gray);
+    })));
+    return;
+  }
+  const left=cx-Math.floor(size/2),top=cy-Math.floor(size/2);
+  const star=Array.from({length:10},(_,i)=>{const a=-Math.PI/2+i*Math.PI/5,r=i%2?.22:.5;return [Math.cos(a)*r,Math.sin(a)*r];});
+  for (let y=Math.max(0,top);y<Math.min(raster.height,top+size);y++) for (let x=Math.max(0,left);x<Math.min(raster.width,left+size);x++) {
+    const u=(x-left+.5)/size-.5,v=(y-top+.5)/size-.5,r=Math.hypot(u,v);
+    let on=false;
+    switch(kind) {
+      case 'disk': on=r<=.5; break;
+      case 'annulus': on=r<=.5&&r>=hole/200; break;
+      case 'square': on=true; break;
+      case 'triangle': on=insidePolygon(u,v,[[-.5,-.5],[.5,0],[-.5,.5]]); break;
+      case 'hline': on=y>=cy-Math.floor(thickness/2)&&y<cy-Math.floor(thickness/2)+thickness; break;
+      case 'vline': on=x>=cx-Math.floor(thickness/2)&&x<cx-Math.floor(thickness/2)+thickness; break;
+      case 'left': on=u<0; break;
+      case 'right': on=u>=0; break;
+      case 'hstripes': on=(y-top)%period<Math.ceil(period/2); break;
+      case 'vstripes': on=(x-left)%period<Math.ceil(period/2); break;
+      case 'star': on=insidePolygon(u,v,star); break;
+      case 'smiley': on=(r>.43&&r<=.5)||Math.hypot(u-.17,v+.14)<.055||Math.hypot(u+.17,v+.14)<.055||(v>.08&&r>.25&&r<.31); break;
+    }
+    if (on) raster.pixels[y*raster.width+x]=gray;
+  }
+}
+
+// UI: no dependencies and no network requests.
+const $=id=>document.getElementById(id);
+const bitmap=$('bitmap'),overlay=$('overlay'),ctx=bitmap.getContext('2d'),guide=overlay.getContext('2d');
+let raster=new Raster(1920,1080),imageData,scale=1,tool='draw',activeSection='drawing';
+let cursors=[],selectedCursorId=null,nextCursorId=1;
+let undoStack=[],redoStack=[],stroke=null,hover=null,framePending=false,importToken=0;
+const HISTORY_BYTES=64*1024*1024;
+function say(message) { $('status').textContent=message; }
+function number(id,min,max,fallback) {
+  const raw=$(id).value;
+  let v=raw.trim()===''?fallback:Math.round(Number(raw));
+  if (!Number.isFinite(v)) v=fallback;
+  v=Math.min(max,Math.max(min,v)); $(id).value=v; return v;
+}
+function center() { return [number('centerX',0,raster.width-1,0),number('centerY',0,raster.height-1,0)]; }
+function snapshot() {return {raster:raster.copy(),center:center(),cursors:cursors.map(c=>({...c})),selectedCursorId};}
+function restore(state) {
+  raster=state.raster;$('centerX').value=state.center[0];$('centerY').value=state.center[1];
+  cursors=state.cursors.map(c=>({...c}));selectedCursorId=state.selectedCursorId;
+  changedDimensions();historyButtons();
+}
+function trimHistory() {
+  let bytes=[...undoStack,...redoStack].reduce((sum,s)=>sum+s.raster.pixels.byteLength,0);
+  while(bytes>HISTORY_BYTES&&undoStack.length>1) bytes-=undoStack.shift().raster.pixels.byteLength;
+  while(bytes>HISTORY_BYTES&&redoStack.length>1) bytes-=redoStack.shift().raster.pixels.byteLength;
+}
+function historyButtons() { $('undo').disabled=!undoStack.length; $('redo').disabled=!redoStack.length; }
+function checkpoint() { undoStack.push(snapshot()); redoStack=[]; trimHistory(); historyButtons(); }
+function changedDimensions() {
+  bitmap.width=overlay.width=raster.width; bitmap.height=overlay.height=raster.height;
+  imageData=ctx.createImageData(raster.width,raster.height);
+  $('width').value=raster.width; $('height').value=raster.height;
+  $('centerX').max=raster.width-1; $('centerY').max=raster.height-1;
+  $('cursorX').max=raster.width-1;$('cursorY').max=raster.height-1;
+  for(const c of cursors){c.x=Math.min(c.x,raster.width-1);c.y=Math.min(c.y,raster.height-1);}
+  center();syncCursorControls();fit();render();
+}
+function render() {
+  const data=imageData.data,p=raster.pixels;
+  for(let i=0,j=0;i<p.length;i++,j+=4) {data[j]=data[j+1]=data[j+2]=p[i];data[j+3]=255;}
+  ctx.putImageData(imageData,0,0); renderOverlay();
+}
+function queueRender() {if(!framePending){framePending=true;requestAnimationFrame(()=>{framePending=false;render();});}}
+function fit() {
+  const z=$('zoom').value;
+  scale=z==='fit'?Math.min(1,Math.max(1,$('viewport').clientWidth-2)/raster.width,Math.max(180,innerHeight*.6)/raster.height):Number(z);
+  $('stage').style.width=(raster.width*scale)+'px'; $('stage').style.height=(raster.height*scale)+'px';
+  renderOverlay();
+}
+function renderOverlay() {
+  guide.clearRect(0,0,raster.width,raster.height);
+  if($('grid').checked&&scale>=2) {
+    const vp=$('viewport'),x0=Math.max(0,Math.floor(vp.scrollLeft/scale)),y0=Math.max(0,Math.floor(vp.scrollTop/scale));
+    const x1=Math.min(raster.width,Math.ceil((vp.scrollLeft+vp.clientWidth)/scale)),y1=Math.min(raster.height,Math.ceil((vp.scrollTop+vp.clientHeight)/scale));
+    guide.strokeStyle='rgba(128,128,128,.45)'; guide.lineWidth=1/scale;guide.beginPath();
+    for(let x=x0;x<=x1;x++){guide.moveTo(x,y0);guide.lineTo(x,y1);}
+    for(let y=y0;y<=y1;y++){guide.moveTo(x0,y);guide.lineTo(x1,y);}
+    guide.stroke();
+  }
+  for(const c of cursors) {
+    const {x,y,size}=c,half=Math.floor(size/2),tail=Math.ceil(size/2);
+    guide.save();
+    guide.strokeStyle='black';guide.lineWidth=4/scale;guide.beginPath();
+    guide.moveTo(x-half,y+.5);guide.lineTo(x+tail,y+.5);guide.moveTo(x+.5,y-half);guide.lineTo(x+.5,y+tail);guide.stroke();
+    guide.strokeStyle=c.id===selectedCursorId?'#ffbb00':'#00e6ec';guide.lineWidth=2/scale;guide.stroke();
+    guide.font=`${12/scale}px sans-serif`;guide.textBaseline='bottom';guide.lineWidth=3/scale;
+    const label=String(c.id);guide.strokeText(label,x+7/scale,y-7/scale);guide.fillStyle=guide.strokeStyle;guide.fillText(label,x+7/scale,y-7/scale);
+    guide.restore();
+  }
+  if(hover&&activeSection==='drawing') {
+    const size=Number($('brush').value),[x0,y0,x1,y1]=raster.bounds(hover.x,hover.y,size);
+    guide.strokeStyle='#ffbb00';guide.lineWidth=1/scale;guide.strokeRect(x0,y0,x1-x0,y1-y0);
+  }
+}
+function setTool(value) {
+  tool=value;
+  $('drawTool').setAttribute('aria-pressed',String(value==='draw'));$('eraseTool').setAttribute('aria-pressed',String(value==='erase'));
+}
+function selectedCursor() {return cursors.find(c=>c.id===selectedCursorId);}
+function syncCursorControls() {
+  const c=selectedCursor(),select=$('cursorSelect');select.replaceChildren();
+  if(!cursors.length) select.add(new Option('No cursors',''));
+  for(const item of cursors) select.add(new Option(`Cursor ${item.id}`,String(item.id)));
+  select.value=c?String(c.id):'';select.disabled=!cursors.length;
+  for(const id of ['removeCursor','cursorX','cursorY','cursorSize','cursorGray','includeCursor'])$(id).disabled=!c;
+  if(c){$('cursorX').value=c.x;$('cursorY').value=c.y;$('cursorSize').value=c.size;$('cursorGray').value=c.gray;}
+  $('includeCursor').checked=!!c?.include;
+}
+function createCursor(p) {
+  const c={id:nextCursorId++,x:p.x,y:p.y,size:number('cursorSize',3,4096,64),gray:number('cursorGray',0,255,255),include:false};
+  cursors.push(c);selectedCursorId=c.id;syncCursorControls();return c;
+}
+function moveCursor(c,p) {
+  c.x=Math.max(0,Math.min(raster.width-1,Math.round(p.x)));c.y=Math.max(0,Math.min(raster.height-1,Math.round(p.y)));
+  $('cursorX').value=c.x;$('cursorY').value=c.y;renderOverlay();
+}
+function hitCursor(p) {
+  const tolerance=10/scale;
+  return cursors.filter(c=>{
+    const dx=Math.abs(c.x-p.x),dy=Math.abs(c.y-p.y),reach=Math.max(c.size/2,tolerance);
+    return (dx<=tolerance&&dy<=reach+tolerance)||(dy<=tolerance&&dx<=reach+tolerance);
+  }).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y)||Number(b.id===selectedCursorId)-Number(a.id===selectedCursorId))[0];
+}
+
+function setGray(value) {
+  value=Math.max(0,Math.min(255,Math.round(Number(value)||0)));
+  $('gray').value=$('grayNumber').value=value;$('colorPreview').style.background=`rgb(${value},${value},${value})`;
+  document.querySelectorAll('[data-gray]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.gray)===value)));
+}
+function eventPoint(event) {
+  const rect=overlay.getBoundingClientRect();
+  return {x:Math.max(0,Math.min(raster.width-1,Math.floor((event.clientX-rect.left)*raster.width/rect.width))),y:Math.max(0,Math.min(raster.height-1,Math.floor((event.clientY-rect.top)*raster.height/rect.height)))};
+}
+function canvasCursor() {
+  overlay.style.cursor=activeSection==='examples'?(stroke?.kind==='pattern'?'grabbing':'grab'):activeSection==='file'?'default':'crosshair';
+}
+overlay.addEventListener('pointerdown',event=>{
+  if(event.button!==0||stroke||activeSection==='file') return;
+  event.preventDefault();overlay.focus({preventScroll:true});overlay.setPointerCapture(event.pointerId);
+  const p=eventPoint(event);hover=p;
+  if(activeSection==='view') {
+    checkpoint();
+    const hit=hitCursor(p);
+    let c=hit||selectedCursor();
+    if(!c)c=createCursor(p);
+    selectedCursorId=c.id;syncCursorControls();
+    stroke={id:event.pointerId,kind:'cursor',cursor:c,offset:hit?{x:p.x-c.x,y:p.y-c.y}:{x:0,y:0}};
+    if(!hit)moveCursor(c,p);else renderOverlay();return;
+  }
+  if(activeSection==='examples') {
+    const bounds=contentBounds(raster);
+    if(!bounds){say('The bitmap is all OFF. Draw or apply a pattern first.');return;}
+    stroke={id:event.pointerId,kind:'pattern',start:p,source:raster.copy(),bounds,center:center(),saved:false,dx:0,dy:0};
+    canvasCursor();return;
+  }
+  const brush=Number($('brush').value),gray=Number($('gray').value);
+  const value=tool==='erase'||gray===0||raster.isStamp(p.x,p.y,brush,gray)?0:gray;
+  checkpoint();stroke={id:event.pointerId,kind:'draw',last:p,brush,value};
+  raster.stamp(p.x,p.y,brush,value);queueRender();
+});
+overlay.addEventListener('pointermove',event=>{
+  const p=eventPoint(event);hover=p;$('position').textContent=`Pointer: (${p.x}, ${p.y}) · gray ${raster.pixels[p.y*raster.width+p.x]}`;
+  if(!stroke||event.pointerId!==stroke.id){renderOverlay();return;}
+  if(stroke.kind==='cursor'){moveCursor(stroke.cursor,{x:p.x-stroke.offset.x,y:p.y-stroke.offset.y});return;}
+  if(stroke.kind==='pattern') {
+    const offset=moveOffset(stroke.source,stroke.bounds,p.x-stroke.start.x,p.y-stroke.start.y);
+    // Keep the editable center on the bitmap as well as every nonzero pixel.
+    offset.dx=Math.max(-stroke.center[0],Math.min(raster.width-1-stroke.center[0],offset.dx));
+    offset.dy=Math.max(-stroke.center[1],Math.min(raster.height-1-stroke.center[1],offset.dy));
+    if(offset.dx===stroke.dx&&offset.dy===stroke.dy)return;
+    if(!stroke.saved){checkpoint();stroke.saved=true;}
+    stroke.dx=offset.dx;stroke.dy=offset.dy;
+    translateInto(stroke.source,raster,stroke.bounds,offset.dx,offset.dy);
+    $('centerX').value=stroke.center[0]+offset.dx;$('centerY').value=stroke.center[1]+offset.dy;
+    queueRender();return;
+  }
+  raster.line(stroke.last.x,stroke.last.y,p.x,p.y,stroke.brush,stroke.value);stroke.last=p;queueRender();
+});
+function endStroke(event) {
+  if(!stroke||stroke.id!==event.pointerId) return;
+  if(stroke.kind==='cursor')say(`Cursor ${stroke.cursor.id}: (${stroke.cursor.x}, ${stroke.cursor.y}).`);
+  else if(stroke.kind==='pattern')say(stroke.saved?`Pattern moved ${stroke.dx}, ${stroke.dy} px. Center: (${center().join(', ')}). Ctrl/Cmd+Z to undo.`:'Drag to move the pattern. Content cannot move past the canvas edges.');
+  else say('Drawing updated. Click the same spot with the same gray to erase it.');
+  stroke=null;canvasCursor();render();
+}
+overlay.addEventListener('pointerup',endStroke);overlay.addEventListener('pointercancel',endStroke);overlay.addEventListener('lostpointercapture',endStroke);
+overlay.addEventListener('pointerleave',()=>{if(!stroke){hover=null;renderOverlay();}});
+overlay.addEventListener('keydown',event=>{
+  const c=selectedCursor();
+  if(activeSection!=='view'||!c||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
+  event.preventDefault();checkpoint();const step=event.shiftKey?10:1;
+  moveCursor(c,{x:c.x+(event.key==='ArrowRight'?step:event.key==='ArrowLeft'?-step:0),y:c.y+(event.key==='ArrowDown'?step:event.key==='ArrowUp'?-step:0)});
+  say(`Cursor ${c.id}: (${c.x}, ${c.y}).`);
+});
+$('gray').addEventListener('input',e=>setGray(e.target.value));$('grayNumber').addEventListener('change',e=>setGray(e.target.value));
+$('swatches').addEventListener('click',e=>{if(e.target.dataset.gray!==undefined){setGray(e.target.dataset.gray);setTool('draw');}});
+$('brush').addEventListener('input',()=>{$('brushValue').textContent=`${$('brush').value} × ${$('brush').value} px`;renderOverlay();});
+$('drawTool').onclick=()=>setTool('draw');$('eraseTool').onclick=()=>setTool('erase');
+$('undo').onclick=()=>{if(!undoStack.length)return;redoStack.push(snapshot());const state=undoStack.pop();trimHistory();restore(state);say('Undone.');};
+$('redo').onclick=()=>{if(!redoStack.length)return;undoStack.push(snapshot());const state=redoStack.pop();trimHistory();restore(state);say('Redone.');};
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,select,textarea')||!(e.ctrlKey||e.metaKey))return;
+  if(e.key.toLowerCase()==='z'){e.preventDefault();$(e.shiftKey?'redo':'undo').click();}
+  else if(e.key.toLowerCase()==='y'){e.preventDefault();$('redo').click();}
+});
+function applyExample() {
+  const kind=$('example').value;if(!kind){say('Choose an example first.');return;}
+  const [cx,cy]=center();checkpoint();
+  const options={cx,cy,size:number('patternSize',1,4096,128),gray:Number($('gray').value),thickness:number('lineWidth',1,4096,16),period:number('period',2,4096,16),hole:number('hole',0,95,50),text:$('text').value};
+  pattern(raster,kind,options);render();
+  say(`${$('example').selectedOptions[0].text} applied at (${cx}, ${cy}).${options.gray===0&&!['on','off'].includes(kind)?' Selected gray is 0, so the result is black.':''}`);
+}
+$('example').onchange=applyExample;$('applyExample').onclick=applyExample;
+$('canvasCenter').onclick=()=>{$('centerX').value=Math.floor(raster.width/2);$('centerY').value=Math.floor(raster.height/2);say('Pattern center updated. Apply example to regenerate the shape here.');};
+$('addCursor').onclick=()=>{
+  checkpoint();const [x,y]=center(),c=createCursor({x,y});renderOverlay();
+  say(`Cursor ${c.id} added. Click anywhere on the canvas to place it, then drag crosshairs to adjust them.`);
+};
+$('removeCursor').onclick=()=>{
+  const c=selectedCursor();if(!c)return;
+  checkpoint();cursors=cursors.filter(item=>item.id!==c.id);selectedCursorId=cursors.at(-1)?.id??null;
+  syncCursorControls();renderOverlay();say(`Cursor ${c.id} removed.`);
+};
+$('cursorSelect').onchange=()=>{selectedCursorId=Number($('cursorSelect').value);syncCursorControls();renderOverlay();};
+for(const id of ['cursorX','cursorY','cursorSize','cursorGray','includeCursor'])$(id).addEventListener('change',()=>{
+  const c=selectedCursor();if(!c)return;checkpoint();
+  c.x=number('cursorX',0,raster.width-1,c.x);c.y=number('cursorY',0,raster.height-1,c.y);
+  c.size=number('cursorSize',3,4096,c.size);c.gray=number('cursorGray',0,255,c.gray);c.include=$('includeCursor').checked;
+  syncCursorControls();renderOverlay();
+});
+$('grid').addEventListener('change',renderOverlay);
+$('zoom').onchange=fit;window.addEventListener('resize',fit);$('viewport').addEventListener('scroll',renderOverlay);
+$('resize').onclick=()=>{
+  const width=number('width',1,4096,raster.width),height=number('height',1,4096,raster.height);
+  if(width===raster.width&&height===raster.height){say('Canvas is already this size.');return;}
+  checkpoint();const next=new Raster(width,height);
+  for(let y=0;y<Math.min(height,raster.height);y++)next.pixels.set(raster.pixels.subarray(y*raster.width,y*raster.width+Math.min(width,raster.width)),y*width);
+  raster=next;changedDimensions();say(`Canvas resized to ${width} × ${height}. Undo restores the previous size and pixels.`);
+};
+$('export').onclick=()=>{
+  const result=raster.copy();
+  const included=cursors.filter(c=>c.include);
+  for(const c of included)result.crosshair(c.x,c.y,c.size,c.gray);
+  let name=$('filename').value.trim().replace(/[\\/:*?"<>|\x00-\x1f]/g,'_')||'dmd_pattern.bmp';
+  if(!/\.bmp$/i.test(name))name+='.bmp';
+  const url=URL.createObjectURL(new Blob([encodeBMP(result)],{type:'image/bmp'})),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
+  say(`Exported ${name}: ${raster.width} × ${raster.height}, 24-bit BMP. ${included.length} cursor(s) included.`);
+};
+$('import').onchange=async event=>{
+  const file=event.target.files[0];if(!file)return;
+  if(file.size>80*1024*1024){say('File is too large. Open a BMP or PNG under 80 MB.');event.target.value='';return;}
+  const token=++importToken,url=URL.createObjectURL(file),img=new Image();
+  try {
+    img.src=url;await img.decode();if(token!==importToken)return;
+    if(img.width>4096||img.height>4096)throw new Error('Maximum image dimensions are 4096 × 4096.');
+    const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const g=c.getContext('2d');
+    g.fillStyle='black';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0);
+    const rgba=g.getImageData(0,0,c.width,c.height).data,next=new Raster(c.width,c.height);
+    for(let i=0;i<next.pixels.length;i++){const j=i*4;next.pixels[i]=Math.round(.2126*rgba[j]+.7152*rgba[j+1]+.0722*rgba[j+2]);}
+    checkpoint();raster=next;changedDimensions();say(`Opened ${file.name} at its original size. Color images become grayscale; transparency becomes black.`);
+  } catch(error) {say('Could not open image: '+error.message);}
+  finally {URL.revokeObjectURL(url);event.target.value='';}
+};
+// Sidebar tabs keep the canvas and its pixels in place.
+const tabs=Array.from(document.querySelectorAll('#tabs [role=tab]'));
+function selectTab(tab) {
+  if(stroke)endStroke({pointerId:stroke.id});
+  activeSection=tab.id.replace('tab-','');hover=null;canvasCursor();
+  for (const item of tabs) {
+    const selected=item===tab;
+    item.setAttribute('aria-selected',String(selected));
+    item.tabIndex=selected?0:-1;
+    $(item.getAttribute('aria-controls')).hidden=!selected;
+  }
+  fit();
+}
+for (const tab of tabs) {
+  tab.addEventListener('click',()=>selectTab(tab));
+  tab.addEventListener('keydown',event=>{
+    const i=tabs.indexOf(tab);
+    let next;
+    if(event.key==='ArrowRight'||event.key==='ArrowDown') next=(i+1)%tabs.length;
+    else if(event.key==='ArrowLeft'||event.key==='ArrowUp') next=(i+tabs.length-1)%tabs.length;
+    else if(event.key==='Home') next=0;
+    else if(event.key==='End') next=tabs.length-1;
+    else return;
+    event.preventDefault();selectTab(tabs[next]);tabs[next].focus();
+  });
+}
+setGray(255);changedDimensions();say('Ready · 1920 × 1080 · black is OFF, white is ON.');
+</script>
+</body>
+</html>
